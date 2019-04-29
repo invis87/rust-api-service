@@ -1,0 +1,18 @@
+[package]
+name = "api-service"
+version = "0.1.0"
+authors = ["Aleksandrov Vladimir <invis87@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+actix-web = "^0.7"
+reqwest = "^0.9"
+serde = "^1"
+serde_derive = "^1"
+serde_json = "^1"
+futures = "^0"
+failure = "^0.1"
+
+slog = "^2"
+slog-term = "^2"
+slog-async = "^2"
