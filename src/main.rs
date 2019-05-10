@@ -18,7 +18,6 @@ use actix_web::{http, server, App};
 use std::sync::{Arc, Mutex};
 use my_kafka::KafkaWriter;
 
-#[derive(Clone)]
 pub struct AppState {
     log: slog::Logger,
     kafka_writer: Arc<Mutex<KafkaWriter>>,

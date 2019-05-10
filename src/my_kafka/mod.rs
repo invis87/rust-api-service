@@ -14,7 +14,7 @@ impl KafkaWriter {
         .with_ack_timeout(Duration::from_secs(1))
         .with_required_acks(RequiredAcks::One)
         .create()
-        .unwrap();
+        .expect("fail to create kafka producer");
         KafkaWriter { producer }
     }
 
