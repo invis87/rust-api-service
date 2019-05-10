@@ -11,6 +11,7 @@ use actix_web::FutureResponse;
 use crate::my_kafka::KafkaWriter;
 use std::sync::Mutex;
 use std::sync::Arc;
+use crate::my_kafka::KafkaReader;
 
 #[derive(Fail, Debug)]
 pub enum CalculatorError {
@@ -42,11 +43,24 @@ pub fn health(req: HttpRequest<AppState>) -> FutureResponse<String> {
     let log: &slog::Logger = &req.state().log;
     info!(log, "Health requested");
 
+    let topic = &req.state().kafka_topic;
     let kafka_writer_arc: &Arc<Mutex<KafkaWriter>> = &req.state().kafka_writer;
     let mut kafka_writer = kafka_writer_arc.lock().expect("fail to get kafka writer");
-    kafka_writer.send_string("rust-api-data", "health requested", log);
+    kafka_writer.send_string(topic, "health requested", log);
 
     future::ok("OK".to_string()).responder()
+}
+
+pub fn consume(req: HttpRequest<AppState>) -> FutureResponse<String> {
+    let log: &slog::Logger = &req.state().log;
+    info!(log, "consume requested");
+
+    let kafka_reader_arc: &Arc<Mutex<KafkaReader>> = &req.state().kafka_reader;
+    let mut kafka_reader = kafka_reader_arc.lock().expect("fail to get kafka reader");
+
+    let messages_from_kafka = kafka_reader.read_next(log);
+
+    future::ok(messages_from_kafka).responder()
 }
 
 pub fn json_error_handler(err: error::JsonPayloadError, _: &HttpRequest<AppState>) -> Error {

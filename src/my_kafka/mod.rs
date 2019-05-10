@@ -1,7 +1,9 @@
 extern crate kafka;
 
+use std::fmt::Write;
 use std::time::Duration;
 use kafka::producer::{Producer, Record, RequiredAcks};
+use kafka::consumer::{Consumer, FetchOffset, GroupOffsetStorage};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct KafkaWriter {
@@ -29,5 +31,42 @@ impl KafkaWriter {
             Ok(_) => info!(log, "message '{}' successfully sends to topic '{}'", msg, topic),
             Err(error) => error!(log, "fail to send message to kafka, reason: {:?}", error)
         }
+    }
+}
+
+pub struct KafkaReader {
+    consumer: Consumer,
+}
+
+impl KafkaReader {
+    pub fn new(topic: String, hosts: Vec<String>) -> Self {
+        let group_name = format!("{}-group", topic);
+        let consumer = Consumer::from_hosts(hosts)
+            .with_topic(topic)
+            .with_fallback_offset(FetchOffset::Earliest)
+            .with_group(group_name)
+            .with_offset_storage(GroupOffsetStorage::Kafka)
+            .create()
+            .expect("fail to create kafka consumer");
+        KafkaReader { consumer }
+    }
+
+    pub fn read_next(&mut self, log: &slog::Logger) -> String {
+        let mut buf = String::with_capacity(100);
+        let polled = self.consumer.poll().expect("fail to get message from kafka");
+
+        for ms in polled.iter() {
+            for m in ms.messages() {
+                info!(log, "consume kafka message, offset={}", m.offset);
+                let message_key: &[u8] = m.key;
+                let message_value: &[u8] = m.value;
+                let key = String::from_utf8(message_key.to_vec()).unwrap();
+                let value = String::from_utf8(message_value.to_vec()).unwrap();
+                write!(&mut buf, "key={}, value={}", key, value).expect("fail to write to string buffer");
+            }
+            self.consumer.consume_messageset(ms).expect("fail to mark kafka messages sa consumed");
+        }
+        self.consumer.commit_consumed().expect("fail to commit messages as consumer");
+        buf
     }
 }
