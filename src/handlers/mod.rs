@@ -1,7 +1,7 @@
 use super::data::{CalculateRequest, CalculateResponse};
 use super::AppState;
 
-use actix_web::{error, Error, HttpRequest, HttpResponse, Json, Path, Responder};
+use actix_web::{error, Error, HttpRequest, HttpResponse, Json};
 use std::thread;
 use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};

@@ -15,11 +15,8 @@ mod handlers;
 mod my_kafka;
 
 use actix_web::{http, server, App};
-use actix_web::Responder;
-use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use my_kafka::KafkaWriter;
-use kafka::producer::{Producer, Record};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -27,15 +24,9 @@ pub struct AppState {
     kafka_writer: Arc<Mutex<KafkaWriter>>,
 }
 
-
-
-use std::fmt::Write;
-use std::time::Duration;
-use kafka::producer::RequiredAcks;
-
-
 fn main() {
-    let kafka_writer = KafkaWriter::new(vec!["localhost:9092".to_owned(), "localhost:9093".to_owned(), "localhost:9094".to_owned()]);
+    let kafka_brokers = vec!["localhost:9092".to_owned(), "localhost:9093".to_owned(), "localhost:9094".to_owned()];
+    let kafka_writer = KafkaWriter::new(kafka_brokers);
     let arc_kafka_writer = Arc::new(Mutex::new(kafka_writer));
 
     let log = logging::setup_logging();
