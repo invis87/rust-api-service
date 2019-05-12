@@ -23,7 +23,6 @@ pub struct AppState {
     log: slog::Logger,
     kafka_writer: Arc<Mutex<KafkaWriter>>,
     kafka_reader: Arc<Mutex<KafkaReader>>,
-    kafka_topic: String,
 }
 
 fn main() {
@@ -43,13 +42,16 @@ fn main() {
         log: log.clone(),
         kafka_writer: Arc::clone(&arc_kafka_writer),
         kafka_reader: Arc::clone(&arc_kafka_reader),
-        kafka_topic: kafka_topic.clone(),
     })
         .resource("/calculate", |r| {
             r.method(http::Method::POST)
                 .with_config(handlers::calculate, |cfg| {(cfg.0).1.error_handler(handlers::json_error_handler);})
         })
         .resource("/health", |r| { r.method(http::Method::GET).with(handlers::health) })
+        .resource("/produce", |r| {
+        r.method(http::Method::POST)
+            .with_config(handlers::produce, |cfg| {(cfg.0).1.error_handler(handlers::json_error_handler);})
+    })
         .resource("/consume", |r| { r.method(http::Method::GET).with(handlers::consume) })
         .finish())
         .bind("0.0.0.0:8080")

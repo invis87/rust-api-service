@@ -5,6 +5,7 @@ use std::time::Duration;
 use kafka::producer::{Producer, Record, RequiredAcks};
 use kafka::consumer::{Consumer, FetchOffset, GroupOffsetStorage};
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::io::{Error, ErrorKind};
 
 pub struct KafkaWriter {
     producer: Producer,
@@ -20,16 +21,20 @@ impl KafkaWriter {
         KafkaWriter { producer }
     }
 
-    pub fn send_string(&mut self, topic: &str, msg: &str, log: &slog::Logger) {
+    pub fn send_string(&mut self, topic: &str, msg: &str, log: &slog::Logger) -> Result<(), Error> {
         let start = SystemTime::now();
         let since_the_epoch = start.duration_since(UNIX_EPOCH).expect("Time went backwards");
         let message_key = since_the_epoch.as_millis().to_string();
 
         let kafka_record = Record::from_key_value(topic, message_key.as_bytes(), msg.as_bytes());
         let send_result = self.producer.send(&kafka_record);
+
         match send_result {
-            Ok(_) => info!(log, "message '{}' successfully sends to topic '{}'", msg, topic),
-            Err(error) => error!(log, "fail to send message to kafka, reason: {:?}", error)
+            Ok(_) => Result::Ok(()),
+            Err(error) => {
+                error!(log, "fail to send message to kafka: {:?}", error);
+                Result::Err(Error::new(ErrorKind::Other, format!("kafka problems: {}", error)))
+            },
         }
     }
 }
@@ -62,7 +67,7 @@ impl KafkaReader {
                 let message_value: &[u8] = m.value;
                 let key = String::from_utf8(message_key.to_vec()).unwrap();
                 let value = String::from_utf8(message_value.to_vec()).unwrap();
-                write!(&mut buf, "key={}, value={}", key, value).expect("fail to write to string buffer");
+                write!(&mut buf, "key={}, value={}\n", key, value).expect("fail to write to string buffer");
             }
             self.consumer.consume_messageset(ms).expect("fail to mark kafka messages sa consumed");
         }
