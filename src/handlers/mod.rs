@@ -1,4 +1,4 @@
-use super::data::{CalculateRequest, CalculateResponse, ProduceRequest, ProduceResponse};
+use super::data::{ProduceRequest, ProduceResponse};
 use super::AppState;
 
 use actix_web::{Error, HttpRequest, HttpResponse, Json};
@@ -36,14 +36,19 @@ impl actix_web::error::ResponseError for ServiceError {
     }
 }
 
-pub fn calculate(
-    (req, calc_req): (HttpRequest<AppState>, Json<CalculateRequest>),
-) -> Result<Json<CalculateResponse>, ServiceError> {
+pub fn do_async(req: HttpRequest<AppState>) -> FutureResponse<String, ServiceError>  {
     let log = &req.state().log;
-    info!(log, "calculating {:?}", calc_req);
-    thread::sleep(Duration::from_secs(2));
-    let millis = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis();
-    Result::Ok(CalculateResponse{result: millis.to_string()}).map(Json)
+    info!(log, "calculating ...");
+
+    let future_result = future::lazy(|| -> Result<String, ServiceError> {
+        thread::sleep(Duration::from_secs(2));
+        SystemTime::now().duration_since(UNIX_EPOCH)
+            .map_err(|_| ServiceError::ExternalServiceError)
+            .map(|dur| dur.as_millis().to_string())
+
+    });
+
+    future_result.responder()
 }
 
 pub fn health(req: HttpRequest<AppState>) -> FutureResponse<String> {

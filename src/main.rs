@@ -43,16 +43,13 @@ fn main() {
         kafka_writer: Arc::clone(&arc_kafka_writer),
         kafka_reader: Arc::clone(&arc_kafka_reader),
     })
-        .resource("/calculate", |r| {
-            r.method(http::Method::POST)
-                .with_config(handlers::calculate, |cfg| {(cfg.0).1.error_handler(handlers::json_error_handler);})
-        })
-        .resource("/health", |r| { r.method(http::Method::GET).with(handlers::health) })
+        .resource("/do_async", |r| { r.method(http::Method::GET).with_async(handlers::do_async) })
+        .resource("/health", |r| { r.method(http::Method::GET).with_async(handlers::health) })
         .resource("/produce", |r| {
         r.method(http::Method::POST)
             .with_config(handlers::produce, |cfg| {(cfg.0).1.error_handler(handlers::json_error_handler);})
     })
-        .resource("/consume", |r| { r.method(http::Method::GET).with(handlers::consume) })
+        .resource("/consume", |r| { r.method(http::Method::GET).with_async(handlers::consume) })
         .finish())
         .bind("0.0.0.0:8080")
         .unwrap()
